@@ -1,13 +1,13 @@
 from bs4 import BeautifulSoup
 import requests
 import pandas as pd
+import datetime
 
 headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/96.0.4664.110 Safari/537.36'
     }
 
-
-def get_feed_articles_df(feedname,url):
+def get_feed_article_titles_df(feedname,url):
     """
     Get article titles and create a DataFrame.
     
@@ -32,9 +32,7 @@ def get_feed_articles_df(feedname,url):
         #Parse it as html to get the links correctly, other wise In some websites, <media:title> is also returned as a link
         soup = BeautifulSoup(result.text, "html.parser")
         article_titles = [i.text for i in soup.findAll('title')]      
-
-        print(article_urls)
-
+        
         df = pd.DataFrame({'Article_title': article_titles, 'Article_URL': article_urls[-len(article_titles):], 'Feedname': feedname})
         
         #Remove homepage from url list and empty url rows
@@ -44,8 +42,29 @@ def get_feed_articles_df(feedname,url):
         # Drop duplicate URLs
         df = df.drop_duplicates(subset=['Article_URL'], keep='first')
 
+        df['Fetch_Date'] = str(datetime.datetime.now())
+
         return df
 
     except Exception as e:
         print("Error getting feed: ", e)
         return pd.DataFrame()
+
+def get_article_text(url):
+    try:
+        result = requests.get(url[0][0], headers=headers)
+        soup = BeautifulSoup(result.text, "html.parser")   
+        return (soup.text)     
+    except Exception as e:        
+        try:
+            result = requests.get(url[0], headers=headers)
+            soup = BeautifulSoup(result.text, "html.parser")   
+            return (soup.text)    
+        except Exception as e:
+            try:
+                result = requests.get(url, headers=headers)
+                soup = BeautifulSoup(result.text, "html.parser")   
+                return (soup.text)    
+            except Exception as e:
+                print(e)
+                return None

@@ -31,23 +31,28 @@ def create_db():
         sqlite3.Connection: Connection object to the SQLite database.
     """
     
-    query = "CREATE TABLE IF NOT EXISTS FEEDS( Feedname, Article_title UNIQUE, Article_URL, Duplicate, Date, Summary)"    
+    query = ["CREATE TABLE IF NOT EXISTS FEEDS( Feedname, Article_title UNIQUE, Article_URL, Duplicate, Fetch_Date, Summary)",
+    "CREATE TABLE IF NOT EXISTS SUMMARY( Feedname, Article_URL,Summary)"]
 
-    con = get_connection(db_name)
+    con = get_connection()
+    
     if con is None:
         return None
     
     try:
-        cur = con.cursor()
-        cur.execute(query)
-        con.commit()
-        return con
+        for item in query:
+            cur = con.cursor()
+            cur.execute(item)
+            con.commit()
+        #return con
     except sqlite3.Error as e:
         print("Error creating database: ", e)
         con.close()
-        return None
+        #return None
+    
+    print("DB created successfully")
 
-def insert_to_db(con, table, data, query):
+def insert_to_db(data, query):
     """
     Insert data into SQLite database using executemany.
     
@@ -59,6 +64,8 @@ def insert_to_db(con, table, data, query):
     Returns:
         None
     """
+    con = get_connection()
+
     if not data:
         print("No data to insert.")
         return
@@ -71,7 +78,68 @@ def insert_to_db(con, table, data, query):
         print("Error inserting data into database: ", e)
         con.rollback()
 
-def delete_from_db(con, query):
+def insert_to_FEEDS(data):
+    con = get_connection()
+
+    if len(data) == 0:
+        print("No data to insert.")
+        return
+    
+    try:
+        cur = con.cursor()
+
+        query = "INSERT OR REPLACE INTO FEEDS(Article_title,Article_URL,Feedname,Fetch_Date) VALUES (?, ?, ?, ?)"
+
+        cur.executemany(query, data)
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print("Error inserting data into database: ", e)
+        con.rollback()
+        con.close()
+
+def insert_to_FEEDS_with_summary(data):
+    con = get_connection()
+
+    if len(data) == 0:
+        print("No data to insert.")
+        return
+    
+    try:
+        cur = con.cursor()
+
+        query = "INSERT OR REPLACE INTO FEEDS(Feedname, Article_title,Article_URL,Duplicate,Fetch_Date,Summary) VALUES (?, ?, ?, ?, ?, ?)"
+
+        cur.executemany(query, data)
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print("Error inserting data into database: ", e)
+        con.rollback()
+        con.close()
+
+def insert_to_Summary(data):
+    con = get_connection()
+
+    if len(data) == 0:
+        print("No data to insert.")
+        return
+    
+    try:
+        cur = con.cursor()
+
+        query = "INSERT OR REPLACE INTO SUMMARY(Feedname, Article_URL,Summary) VALUES (?, ?, ?)"
+
+        cur.executemany(query, data)
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print("Error inserting data into database: ", e)
+        con.rollback()
+        con.close()
+
+
+def delete_from_db(tablename):
     """
     Delete data from SQLite database.
     
@@ -82,6 +150,8 @@ def delete_from_db(con, query):
     Returns:
         None
     """
+    con = get_connection()
+    query = "DROP TABLE IF EXISTS " + tablename
     try:
         cur = con.cursor()
         cur.execute(query)
@@ -91,7 +161,7 @@ def delete_from_db(con, query):
         con.rollback()
 
 
-def query_db(con, query):
+def query_db(query):
     """
     Execute a SQL query and fetch results from SQLite database.
     
@@ -102,6 +172,8 @@ def query_db(con, query):
     Returns:
         list of tuples: Result set fetched from the database.
     """
+    con = get_connection()
+
     try:
         cur = con.cursor()
         cur.execute(query)
@@ -109,3 +181,4 @@ def query_db(con, query):
     except sqlite3.Error as e:
         print("Error executing query: ", e)
         return []
+    
